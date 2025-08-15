@@ -14,9 +14,9 @@ if not os.path.exists(EXTRACTED_DIR):
 
 def data_load_decorator(func):
     def wrapper(*args, **kwargs):
-        print("=== Fetching the Data - Started ===")
+        print("====== Fetching the Data - Started ======")
         result = func(*args, **kwargs)
-        print("=== Fetching the Data - Ended   ===")
+        print("====== Fetching the Data - Ended   ======")
         return result
     return wrapper
 
@@ -29,7 +29,7 @@ class WineRegressionData:
         red_path = os.path.join(EXTRACTED_DIR, "winequality-red.csv")
         self.data = pd.read_csv(red_path, sep=';')
         self.X = self.data.drop('quality', axis=1)
-        self.y = self.data['quality']
+        self.y = self.data[['quality']]
 
     def get_features_targets(self):
         return self.X.copy(), self.y.copy()
@@ -49,7 +49,7 @@ class WineClassificationData:
         white['wine_type'] = 'white'
         self.data = pd.concat([red, white], ignore_index=True)
         self.X = self.data.drop('wine_type', axis=1)
-        self.y = self.data['wine_type']
+        self.y = self.data[['wine_type']]
 
     def get_features_targets(self):
         return self.X.copy(), self.y.copy()

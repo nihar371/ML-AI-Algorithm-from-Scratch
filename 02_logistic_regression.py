@@ -5,26 +5,32 @@ import torch.nn as nn
 import torch.optim as optim
 from torchinfo import summary
 
+from sklearn.preprocessing import OneHotEncoder
+
 # Select cuda if present
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Generate custom wine data
-custom_data_loader = CustomDataLoaders.WineRegressionData()
+custom_data_loader = CustomDataLoaders.WineClassificationData()
 X, y = custom_data_loader.get_features_targets()
+encoder = OneHotEncoder(sparse_output=False)
+y = encoder.fit_transform(y[['wine_type']])
+
 X = torch.tensor(X.to_numpy(), dtype=torch.float32)
-y = torch.tensor(y.to_numpy(), dtype=torch.float32).reshape(-1, 1)
+y = torch.tensor(y, dtype=torch.float32)[:, -1].reshape(-1, 1)
 print("X Shape: ", X.shape, "\nY Shape: ", y.shape, "\n")
 
 # Define a simple linear regression model
-class LinearRegressionModel(nn.Module):
+class LogisticRegressionModel(nn.Module):
     def __init__(self, input_size, output_size):
-        super(LinearRegressionModel, self).__init__()
+        super(LogisticRegressionModel, self).__init__()
         self.linear = nn.Linear(input_size, output_size)
 
     def forward(self, x):
-        return self.linear(x)
+        outputs = self.linear(x)
+        return torch.sigmoid(outputs)
 
-model = LinearRegressionModel(input_size=X.shape[1], output_size=y.shape[1])
+model = LogisticRegressionModel(input_size=X.shape[1], output_size=y.shape[1])
 model.to(device)
 print("\n====== Model Summary ======")
 print(summary(model, input_size=X.shape))
