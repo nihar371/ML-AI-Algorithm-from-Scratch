@@ -1,5 +1,6 @@
 # Import Data Class & Library
 import CustomDataLoaders
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -9,6 +10,13 @@ from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 
 from sklearn.preprocessing import OneHotEncoder
+
+def hinge_loss(outputs, labels):
+    # Ensure labels are -1 or 1
+    labels = labels.float()
+    # Hinge loss: max(0, 1 - y * f(x))
+    loss = torch.mean(torch.clamp(1 - labels * outputs, min=0))
+    return loss
 
 def calculate_accuracy(y_true, y_pred):
     correct = (y_pred.round() == y_true).sum().item()
@@ -23,6 +31,7 @@ custom_data_loader = CustomDataLoaders.WineClassificationData()
 X, y = custom_data_loader.get_features_targets()
 encoder = OneHotEncoder(sparse_output=False)
 y = encoder.fit_transform(y[['wine_type']])
+y = np.where(y==0, -1, 1)
 
 X = torch.tensor(X.to_numpy(), dtype=torch.float32)
 y = torch.tensor(y, dtype=torch.float32)[:, -1].reshape(-1, 1)
@@ -40,22 +49,21 @@ X_test = X_test.to(device)
 y_test = y_test.to(device)
 
 # Define a simple Logistic Regression model
-class LogisticRegressionModel(nn.Module):
+class SVMModel(nn.Module):
     def __init__(self, input_size, output_size):
-        super(LogisticRegressionModel, self).__init__()
+        super(SVMModel, self).__init__()
         self.linear = nn.Linear(input_size, output_size)
 
     def forward(self, x):
         outputs = self.linear(x)
-        return outputs # BCEWithLogitsLoss will apply sigmoid internally
+        return outputs
 
-model = LogisticRegressionModel(input_size=X.shape[1], output_size=y.shape[1])
+model = SVMModel(input_size=X.shape[1], output_size=y.shape[1])
 model.to(device)
 print("\n==================== Model Summary ====================")
 print(summary(model, input_size=X.shape))
 
 # Loss and optimizer
-criterion = nn.BCEWithLogitsLoss()  # Binary Cross Entropy with Logits Loss
 optimizer = optim.SGD(model.parameters(), lr=0.001)
 
 train_losses = []
@@ -71,7 +79,7 @@ for epoch in range(num_epochs):
     model.train() # Set model to training mode
     
     outputs_train_logits = model(X_train)
-    train_loss = criterion(outputs_train_logits, y_train)
+    train_loss = hinge_loss(outputs_train_logits, y_train)
 
     optimizer.zero_grad()
     train_loss.backward()
@@ -81,7 +89,7 @@ for epoch in range(num_epochs):
     model.eval() # Set model to evaluation mode
     with torch.no_grad(): # Disable gradient calculations for evaluation
         outputs_test_logits = model(X_test)
-        test_loss = criterion(outputs_test_logits, y_test)
+        test_loss = hinge_loss(outputs_test_logits, y_test)
 
         # Calculate accuracy
         # Apply sigmoid to logits to get probabilities
@@ -118,8 +126,8 @@ plt.figure(figsize=(10, 6))
 plt.plot(range(1, num_epochs + 1), train_losses, label='Train Loss')
 plt.plot(range(1, num_epochs + 1), test_losses, label='Test Loss')
 plt.xlabel('Epoch')
-plt.ylabel('Loss (Binary Cross Entropy)')
-plt.title('Training and Test Loss over Epochs (Logistic Regression)')
+plt.ylabel('Hinge Loss')
+plt.title('Training and Test Loss over Epochs (SVM)')
 plt.legend()
 plt.grid(True)
 plt.show()
@@ -130,7 +138,7 @@ plt.plot(range(1, num_epochs + 1), train_accuracies, label='Train Accuracy')
 plt.plot(range(1, num_epochs + 1), test_accuracies, label='Test Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
-plt.title('Training and Test Accuracy over Epochs (Logistic Regression)')
+plt.title('Training and Test Accuracy over Epochs (SVM)')
 plt.legend()
 plt.grid(True)
 plt.show()

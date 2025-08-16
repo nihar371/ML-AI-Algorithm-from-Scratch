@@ -14,9 +14,8 @@ if not os.path.exists(EXTRACTED_DIR):
 
 def data_load_decorator(func):
     def wrapper(*args, **kwargs):
-        print("====== Fetching the Data - Started ======")
+        print("==================== Fetching the Data ====================")
         result = func(*args, **kwargs)
-        print("====== Fetching the Data - Ended   ======")
         return result
     return wrapper
 
